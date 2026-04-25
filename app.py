@@ -3,8 +3,9 @@ import pandas as pd
 import pydeck as pdk
 import requests
 
-def fetch_properties(zip_code, min_p, max_p):
-    url = f"https://api.rentcast.io/v1/listings/sale?zipCode={zip_code}&minPrice={min_p}&maxPrice={max_p}&limit=15"
+def fetch_properties(state_code, min_p, max_p):
+    # We switched zipCode={zip_code} to state={state_code}
+    url = f"https://api.rentcast.io/v1/listings/sale?state={state_code}&minPrice={min_p}&maxPrice={max_p}&limit=25&status=Active"
     headers = {"X-Api-Key": API_KEY}
     response = requests.get(url, headers=headers)
     return response.json() if response.status_code == 200 else []
@@ -43,19 +44,20 @@ max_price = st.sidebar.number_input("Max Price ($)", value=1000000, step=50000)
 
 # --- SEARCH TRIGGER ---
 st.sidebar.divider()
-target_zip = st.sidebar.text_input("Enter ZIP Code to Scout", value="34787")
+# target_zip is gone! We only need the button now.
 search_button = st.sidebar.button("🔍 Run Melopros Analysis")
 
 if search_button:
-    with st.spinner(f"Scouting {target_zip} for deals..."):
-        listings = fetch_properties(target_zip, min_price, max_price)
+    with st.spinner(f"Scouting the best deals in {selected_state}..."):
+        # We now pass 'selected_state' into the function
+        listings = fetch_properties(selected_state, min_price, max_price)
         
         if listings:
             df = pd.DataFrame(listings)
             # FIX: Rename columns so the map understands them
             df = df.rename(columns={'latitude': 'lat', 'longitude': 'lon'})
             
-            st.success(f"Found {len(listings)} properties in {target_zip}!")
+            st.success(f"Found {len(listings)} active opportunities in {selected_state}!")
             
             # FIX: This centers the map on the NEW search location
             view_state = pdk.ViewState(
