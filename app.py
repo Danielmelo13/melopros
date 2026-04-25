@@ -3,6 +3,12 @@ import pandas as pd
 import pydeck as pdk
 import requests
 
+def fetch_properties(zip_code, min_p, max_p):
+    url = f"https://api.rentcast.io/v1/listings/sale?zipCode={zip_code}&minPrice={min_p}&maxPrice={max_p}&limit=15"
+    headers = {"X-Api-Key": API_KEY}
+    response = requests.get(url, headers=headers)
+    return response.json() if response.status_code == 200 else []
+
 # --- CONFIG & SECRETS ---
 # Once deployed, you will move the key to Streamlit's Secret Manager
 API_KEY = "MxqmSWaOPvVaAXPEt42aXrhvP4McBq" 
@@ -28,6 +34,28 @@ LANDLORD_STATES = {
 st.sidebar.title("🛡️ Melopros Guard")
 selected_state = st.sidebar.selectbox("Select Target State", list(LANDLORD_STATES.keys()))
 st.sidebar.success(f"Context: {LANDLORD_STATES[selected_state]}")
+
+# --- BUDGET FILTERS ---
+st.sidebar.divider()
+st.sidebar.subheader("💰 Investment Budget")
+min_price = st.sidebar.number_input("Min Price ($)", value=10000, step=10000)
+max_price = st.sidebar.number_input("Max Price ($)", value=1000000, step=50000)
+
+# --- SEARCH TRIGGER ---
+st.sidebar.divider()
+target_zip = st.sidebar.text_input("Enter ZIP Code to Scout", value="34787")
+search_button = st.sidebar.button("🔍 Run Melopros Analysis")
+
+if search_button:
+    with st.spinner(f"Scouting {target_zip} for deals..."):
+        listings = fetch_properties(target_zip, min_price, max_price)
+        if listings:
+            df = pd.DataFrame(listings)
+            # This will put the real pins on your map
+            st.map(df) 
+            st.success(f"Found {len(listings)} properties within your budget!")
+        else:
+            st.error("No properties found in this range. Try adjusting your budget.")
 
 st.sidebar.divider()
 st.sidebar.subheader("💰 Financing & Strategy")
