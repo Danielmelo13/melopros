@@ -49,19 +49,47 @@ search_button = st.sidebar.button("🔍 Run Melopros Analysis")
 if search_button:
     with st.spinner(f"Scouting {target_zip} for deals..."):
         listings = fetch_properties(target_zip, min_price, max_price)
+        
         if listings:
             df = pd.DataFrame(listings)
-            # This will put the real pins on your map
-            st.map(df) 
-            st.success(f"Found {len(listings)} properties within your budget!")
+            # FIX: Rename columns so the map understands them
+            df = df.rename(columns={'latitude': 'lat', 'longitude': 'lon'})
+            
+            st.success(f"Found {len(listings)} properties in {target_zip}!")
+            
+            # FIX: This centers the map on the NEW search location
+            view_state = pdk.ViewState(
+                latitude=df['lat'].iloc[0], 
+                longitude=df['lon'].iloc[0], 
+                zoom=12, 
+                pitch=45
+            )
+            
+            # Display the map with real pins
+            st.pydeck_chart(pdk.Deck(
+                initial_view_state=view_state,
+                layers=[pdk.Layer(
+                    'ScatterplotLayer', 
+                    data=df, 
+                    get_position='[lon, lat]', 
+                    get_color='[200, 30, 0, 160]', 
+                    get_radius=200,
+                    pickable=True
+                )]
+            ))
         else:
-            st.error("No properties found in this range. Try adjusting your budget.")
+            st.warning(f"No properties found in {target_zip} within your budget.")
 
 st.sidebar.divider()
 st.sidebar.subheader("💰 Financing & Strategy")
 dp_pct = st.sidebar.slider("Down Payment (%)", 5, 100, 20)
 interest_rate = st.sidebar.number_input("Interest Rate (%)", value=7.0, step=0.1)
 closing_pct = st.sidebar.slider("Closing Costs (%)", 1, 10, 3)
+
+# --- SEARCH TRIGGER ---
+st.sidebar.divider()
+target_zip = st.sidebar.text_input("Enter ZIP Code to Scout", value="34787")
+search_button = st.sidebar.button("🔍 Run Melopros Analysis")
 
 # --- MAIN UI LAYOUT ---
 col_map, col_ctrl = st.columns([2, 1])
